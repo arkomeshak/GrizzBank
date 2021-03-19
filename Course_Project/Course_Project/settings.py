@@ -83,7 +83,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "grizz_bank",
         "USER": "root",  # Change this if root mysql user isn't named root
-        "PASSWORD": "your password here",
+        "PASSWORD": "2SPKtPLviKm3@Pk4^",
         "HOST": "127.0.0.1",  # Default mysql host set to local host
         "PORT": ""  # Use whatever port mysql defaults to
     }
