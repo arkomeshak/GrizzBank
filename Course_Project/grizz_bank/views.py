@@ -5,8 +5,8 @@ from django.http import HttpResponse
 
 
 def index(request):
-    pass
-    context = {"username": "mike", "id": 12, "Title": "Mike's homepage"}
+    context = {}
+    return render(request, "grizz_bank/index.html", context)
 
 
 def create_account(request):
