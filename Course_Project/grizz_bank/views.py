@@ -4,7 +4,7 @@ from django.http import HttpResponse
 # Create your views here.
 
 
-def index(request):
+def index(request): #recieve a request return a response #
     context = {}
     return render(request, "grizz_bank/index.html", context)
 
