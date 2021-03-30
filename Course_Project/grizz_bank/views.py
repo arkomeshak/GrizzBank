@@ -22,7 +22,15 @@ def login(request):
 
 
 def transfer(request):
-    pass
+    """
+    Django view handling business logic to render a web page where users transfer money between their checkings and
+    savings accounts.
+    :param request: Django HTTPS GET Request
+    :return: HTTPS Response with HTML rendered per transfer.html template
+    """
+    context ={}
+
+    return render(request, "grizz_bank/transfer.html", context)
 
 
 def withdraw_deposit(request):
