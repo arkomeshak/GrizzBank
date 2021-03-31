@@ -1,0 +1,86 @@
+:root {
+    --metallic-gold: rgb(212,175,55);
+    --bg-black: rgba(30,30,30,1);
+}
+
+
+body {
+    min-height: 100vh;
+}
+
+/*
+div.main {
+    height: 100%;
+}
+*/
+
+/* Header/Footer Styles */
+
+section.header nav.navbar {
+    height: 5vh;
+}
+
+footer nav.navbar {
+    height: 5vh;
+}
+
+/* Page Content Styles*/
+
+section.content {
+    height: 90vh;
+    display: flex;
+}
+
+div.vertical-horizontal-center {
+    min-width: 50%;
+    margin: 0;
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    j-ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+}
+
+section.content div.container {
+    height: 75%;
+    vertical-align: middle;
+    display: inline-block;
+    position: absolute;
+    margin: 12% 25% 12% 25%;
+}
+
+
+div.vertical-horizontal-center div.card, div.vertical-horizontal-center div.card-body {
+    padding-right: 0;
+    padding-left: 0;
+    padding-top: 0;
+}
+
+div.grizz-blk-bg, section.header nav.navbar, footer nav.navbar {
+    background-color: var(--bg-black);
+}
+
+div.grizz-gold-txt, footer.footer a.navbar-brand, section.header a.navbar-brand {
+    /* Gold highlighted divs, and brand text get gold text */
+    color: var(--metallic-gold);
+}
+
+/* for divs w/in a */
+div.row div.text-center {
+    text-align: center;
+}
+
+div.vertical-horizontal-center div.card {
+    margin: 0.75em 0.75em 0.75em 0.75em;
+}
+
+
+/* Styles for radio buttons in forms */
+ul.lst-rad-btns li {
+    list-style-type: none;
+}
+
+div.btn-group-toggle input.radio {
+    margin-right: 0;
+    display: inline;
+}
