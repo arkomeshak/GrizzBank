@@ -16,7 +16,7 @@
     <div class="main">
     <section class="header">
         <nav class="navbar navbar-expand-md navbar-dark">
-            <a href="/grizz_bank/" class="navbar-brand">Grizz Bank</a>
+            <a href="/grizz_bank/" class="navbar-brand">GrizzBank</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav">
                     <li class="nav-item"><a class="nav-link" href="../withdraw_deposit">Deposit or Withdraw</a></li>
@@ -29,7 +29,7 @@
     </section>
 
     <section class="content">
-    <div class="vertical-horizontal-center">
+    <div class="horizontal-center-vertical-30">
         <form method="post" >
              <div class="row">
                 <div class="col card">
@@ -38,17 +38,14 @@
                             <h2 class="text-center card-title">Transfer From</h2>
                         </div>
                         <div class="btn-group-toggle" data-toggle="buttons">
-                             <!-- TODO: once DB refactored, transfer view builds these dummy acct lists via
-                                    template lang. Also, JS to restrict btns to 1 checked per card -->
+                             <!-- TODO: JS to restrict btns to 1 checked per card -->
                             <ul class="lst-rad-btns">
-                                <li>
-                                    <label for="sav_acct1_from">Savings Account id#####: <span class="acct-bal">$3000.00: </span></label>
-                                    <input class="radio" type="radio" id="sav_acct1_from" name="sav_acct">
-                                </li>
-                                <li>
-                                    <label for="chk_acct1_from">Checking Account id#####: <span class="acct-bal">$1000.00: </span></label>
-                                    <input class="radio" type="radio" id="chk_acct1_from" name="chk_acct1">
-                                </li>
+                                {%for acct in account_data %}
+                                    <li>
+                                        <label for="acct{{acct.id}}_from">{{acct.type}} Account {{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label>
+                                        <input class="radio" type="radio" id="acct{{acct.id}}_from" name="acct{{acct.id}}">
+                                    </li>
+                                {% endfor %}
                             </ul>
                         </div>
                     </div>
@@ -59,14 +56,13 @@
                             <h2 class="text-center card-title">Transfer To</h2>
                         </div>
                          <ul class="lst-rad-btns">
-                        <!-- TODO: once DB refactored, transfer view builds these dummy acct lists via template lang -->
-                        <li><label for="sav_acct1_to">Savings Account id##### </label>
-                            <input class="radio" type="radio" id="sav_acct1_to" name="sav_acct1_to">
-                        </li>
-                         <li>
-                            <label for="chk_acct1_to">Checking Account id##### </label>
-                            <input class="radio" type="radio" id="chk_acct1_to" name="chk_acct1_to">
-                         </li>
+                        <!-- TODO: JS to ensure only one button in this list selected -->
+                             {%for acct in account_data %}
+                                <li>
+                                    <label for="acct{{acct.id}}_to">{{acct.type}} Account {{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label>
+                                    <input class="radio" type="radio" id="acct{{acct.id}}_to" name="acct{{acct.id}}">
+                                </li>
+                             {% endfor %}
                          </ul>
                     </div>
                 </div>
@@ -84,7 +80,7 @@
 
     <footer class="footer">
         <nav class="navbar navbar-expand-sm navbar-dark">
-            <a href="#" class="navbar-brand">About Grizz Bank</a>
+            <a href="#" class="navbar-brand">About GrizzBank</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav">
                     <li class="nav-item"><a class="nav-link" href="#">About us</a></li>
