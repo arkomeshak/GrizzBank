@@ -15,7 +15,8 @@ def create_account(request):
 
 
 def reset_password(request):
-    pass
+    context = {}
+    return render(request, "grizz_bank/reset_password.html", context)
 
 
 def login(request):
