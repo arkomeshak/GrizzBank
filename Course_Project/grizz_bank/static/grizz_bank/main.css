@@ -41,6 +41,16 @@ div.vertical-horizontal-center {
     transform: translate(-50%, -50%);
 }
 
+div.horizontal-center-vertical-30 {
+    min-width: 50%;
+    margin: 0;
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    j-ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+}
+
 section.content div.container {
     height: 75%;
     vertical-align: middle;
@@ -50,7 +60,8 @@ section.content div.container {
 }
 
 
-div.vertical-horizontal-center div.card, div.vertical-horizontal-center div.card-body {
+div.vertical-horizontal-center div.card, div.vertical-horizontal-center div.card-body,
+div.horizontal-center-vertical-30 div.card, div.horizontal-center-vertical-30 div.card-body {
     padding-right: 0;
     padding-left: 0;
     padding-top: 0;
@@ -70,7 +81,7 @@ div.row div.text-center {
     text-align: center;
 }
 
-div.vertical-horizontal-center div.card {
+div.vertical-horizontal-center div.card, div.horizontal-center-vertical-30 div.card {
     margin: 0.75em 0.75em 0.75em 0.75em;
 }
 
