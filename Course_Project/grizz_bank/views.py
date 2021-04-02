@@ -10,7 +10,8 @@ def index(request):
 
 
 def create_account(request):
-    pass
+    context = {}
+    return render(request, "grizz_bank/create_account.html", context)
 
 
 def reset_password(request):

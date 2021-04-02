@@ -35,7 +35,7 @@ div.vertical-horizontal-center {
     min-width: 50%;
     margin: 0;
     position: absolute;
-    top: 30%;
+    top: 50%;
     left: 50%;
     j-ms-transform: translate(-50%, -50%);
     transform: translate(-50%, -50%);
