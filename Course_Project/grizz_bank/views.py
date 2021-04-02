@@ -4,13 +4,14 @@ from django.http import HttpResponse
 # Create your views here.
 
 
-def index(request): #recieve a request return a response #
+def index(request):
     context = {}
     return render(request, "grizz_bank/index.html", context)
 
 
 def create_account(request):
-    pass
+    context = {}
+    return render(request, "grizz_bank/create_account.html", context)
 
 
 def reset_password(request):
