@@ -20,6 +20,9 @@ def reset_password(request):
 
 def login(request):
     pass
+    context ={}
+
+    return render(request, "grizz_bank/login.html", context)
 
 
 def transfer(request):

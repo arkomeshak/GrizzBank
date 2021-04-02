@@ -84,3 +84,99 @@ div.btn-group-toggle input.radio {
     margin-right: 0;
     display: inline;
 }
+
+
+
+/* CSS for index*/
+.title_container, .Login_content{
+    font-size: 2em;
+    text-align: center;
+}
+
+.account_box{
+    display: grid;
+    text-align:center;
+    padding:1%;
+}
+
+.transfer_btn, .DW_btn, .Logout_btn {
+    font-size: .9em;
+    transition-duration: 0.4s;
+    border-radius: 15px;
+    padding:.2em;
+  }
+  
+.transfer_btn:hover, .DW_btn:hover, .Logout_btn:hover, .login_btn:hover, .cancel_btn:hover, .create_btn:hover, .reset_submit:hover {
+    background-color: black;
+    color: var(--metallic-gold);
+  }
+
+.checking_acct, .saving_acct{
+    margin: 0 auto;
+    width:40%;
+    border: 2px solid black;
+    border-radius: 15px;
+  }
+
+.logout_cont{
+    text-align:center;
+    font-size:1.3em;
+    margin: 0 auto;
+  }
+
+
+
+
+
+  
+  /*
+    Login page
+  */
+.email_label, .password_label{
+    display: inline-block;
+    text-align: right; 
+}
+
+.Email, .Password {
+    width: 60%;
+    border-radius:10px;
+    border: 1px solid black;
+    display: inline-block;
+    float: right;
+    
+  }
+
+.login_form {
+    font-size: .7em;
+    padding:1%;
+    width:40%;
+    text-align:center;
+    border: 3px solid black;
+    border-radius:15px;
+    margin: 0 auto;
+  }
+
+.login_btn, .cancel_btn, .create_btn, .reset_submit{
+    font-size: .9em;
+    transition-duration: 0.4s;
+    border-radius: 15px;
+
+  }
+.Login_container{
+    padding:1%;
+    border-radius:15px;
+    border: 3px solid black;
+  }
+.form_popup{
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+}
+.form-container {
+    max-width: 300px;
+    padding: 10px;
+    background-color: white;
+  }
