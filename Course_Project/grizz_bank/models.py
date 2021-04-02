@@ -8,20 +8,27 @@ from datetime import datetime, timedelta
 
 class Client(models.Model):
     client_id = models.AutoField(primary_key=True)
-    f_name = models.CharField(max_length=45, null=False)
-    l_name = models.CharField(max_length=45, null=False)
+    f_name = models.CharField(max_length=45, null=False, blank=False, default="")
+    l_name = models.CharField(max_length=45, null=False, blank=False, default="")
     pword_salt = models.CharField(max_length=10, null=True)
     pword_hash = models.CharField(max_length=300, null=True)
+    email = models.CharField(max_length=50, null=False, blank=False, default="")
+    username = models.CharField(max_length=45, null=False, blank=False, default="")
+    phone_number = models.CharField(max_length=10, null=False, blank=False, default="")
 
 
-class Username(models.Model):
+class UsernameArchive(models.Model):
+    archive_uname_id = models.AutoField(primary_key=True)
     username = models.fields.CharField(max_length=45)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, primary_key=True)
+    creation_date = models.DateTimeField(null=False, default=datetime.now)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
 
 
-class PhoneNumber(models.Model):
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, primary_key=True)
+class PhoneNumberArchive(models.Model):
+    archive_phone_id = models.AutoField(primary_key=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
     phone_number = models.fields.CharField(max_length=10)
+    creation_date = models.DateTimeField(null=False, default=datetime.now)
 
 
 class InterestRate(models.Model):
@@ -29,9 +36,11 @@ class InterestRate(models.Model):
     interest_rate = models.fields.DecimalField(max_digits=3, decimal_places=2, default=0.0)
 
 
-class Email(models.Model):
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, primary_key=True)
+class EmailArchive(models.Model):
+    archive_email_id = models.AutoField(primary_key=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
     email = models.fields.CharField(max_length=50)
+    creation_date = models.DateTimeField(null=False, default=datetime.now)
 
 
 class Account(models.Model):
