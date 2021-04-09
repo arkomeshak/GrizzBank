@@ -6,7 +6,27 @@ from django.http import HttpResponse
 
 
 def index(request):
+    def create_account_data_list(accounts):
+        # dictionary mapping account type key to an actual account type name
+        types = {"S": "Savings", "C": "Checking"}
+        # List comprehension returning a list of dicitonaries containing account type, balance, and ID
+        acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
+        return acct_data
     context = {}
+    uname = request.GET["uname"]
+    try:
+        client_id = Client.objects.get(username=uname).client_id
+        client_accounts = Account.objects.filter(client_id=client_id)
+        # List comprehension to build a list of python dictionaries containing account data into the context
+        context["account_data"] = create_account_data_list(client_accounts)
+        context["error"] = False
+    except Exception as e:
+        # If an error happens log to console, set context error flag true, and make account data an empty list
+        print(e)
+        context["error"] = True
+        context["account_data"] = list()
+
+    
     return render(request, "grizz_bank/index.html", context)
 
 
