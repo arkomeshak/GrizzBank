@@ -172,7 +172,7 @@ def transfer_handler(request):
             from_acct.save()
             to_acct.save()
         # transfer successfully occurred
-        return HttpResponseRedirect(f"/grizz_bank?uname={uname}?status=transfer_success")
+        return HttpResponseRedirect(f"/grizz_bank?uname={uname}&status=transfer_success")
 
     except IntegrityError as e:
         print(e)
