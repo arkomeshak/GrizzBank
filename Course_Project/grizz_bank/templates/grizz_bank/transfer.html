@@ -30,7 +30,8 @@
 
     <section class="content">
     <div class="horizontal-center-vertical-30">
-        <form method="post" >
+        <form method="post" action="/grizz_bank/transfer_handler/">
+            {% csrf_token %}
              <div class="row">
                 <div class="col card">
                     <div class="card-body">
@@ -42,8 +43,8 @@
                             <ul class="lst-rad-btns">
                                 {%for acct in account_data %}
                                     <li>
-                                        <label for="acct{{acct.id}}_from">{{acct.type}} Account {{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label>
-                                        <input class="radio" type="radio" id="acct{{acct.id}}_from" name="acct{{acct.id}}">
+                                        <label for="from_acct{{acct.id}}">{{acct.type}} Account {{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label>
+                                        <input class="radio" type="radio" id="from_acct{{acct.id}}" name="from_acct{{acct.id}}">
                                     </li>
                                 {% endfor %}
                             </ul>
@@ -59,8 +60,8 @@
                         <!-- TODO: JS to ensure only one button in this list selected -->
                              {%for acct in account_data %}
                                 <li>
-                                    <label for="acct{{acct.id}}_to">{{acct.type}} Account {{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label>
-                                    <input class="radio" type="radio" id="acct{{acct.id}}_to" name="acct{{acct.id}}">
+                                    <label for="to_acct{{acct.id}}">{{acct.type}} Account {{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label>
+                                    <input class="radio" type="radio" id="to_acct{{acct.id}}" name="to_acct{{acct.id}}">
                                 </li>
                              {% endfor %}
                          </ul>
@@ -74,6 +75,8 @@
                    <button type="submit" class="btn btn-dark">submit</button>
                 </div>
             </div>
+            <!-- hidden input containing username for the transfer handler -->
+            <input type="hidden" id="uname" name="uname" value="{{ uname }}">
         </form>
     </div>
     </section>
