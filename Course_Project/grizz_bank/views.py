@@ -5,17 +5,24 @@ from django.db import transaction, IntegrityError
 
 import re  # regular expressions
 import decimal
+import datetime
+datetime.time()
+
+COOKIE_TIMEOUT = 15  # login cookie time to live in minutes
 
 # Create your views here.
 
 
 def index(request):
+    """
     def create_account_data_list(accounts):
         # dictionary mapping account type key to an actual account type name
         types = {"S": "Savings", "C": "Checking"}
         # List comprehension returning a list of dicitonaries containing account type, balance, and ID
         acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
         return acct_data
+    """
+    # TODO: Add login cookie check/refresh here, on failure redirect to login page
     context = {}
     uname = request.GET["uname"]
     try:
@@ -57,19 +64,7 @@ def transfer(request):
     :param request: Django HTTPS GET Request
     :return: HTTPS Response with HTML rendered per transfer.html template
     """
-    def create_account_data_list(accounts):
-        """
-        Helper function which transforms data from a Django Account row object into a list of python dictionaries
-        containing account data (type, balance, id)
-        rendering in the template.
-        :param accounts: list of Account row objects
-        :return: python dictionary
-        """
-        # dictionary mapping account type key to an actual account type name
-        types = {"S": "Savings", "C": "Checking"}
-        # List comprehension returning a list of dictionaries containing account type, balance, and ID
-        acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
-        return acct_data
+    # TODO: Add login cookie check/refresh here, on failure redirect to login page
 
     context = {}
     uname = request.GET["uname"]
@@ -89,7 +84,32 @@ def transfer(request):
     return render(request, "grizz_bank/transfer.html", context)
 
 
-def withdraw_deposit(request):
+def deposit(request):
+    """
+    Django view to handle business logic needed to render the deposit page a client uses to deposit money into one of
+    their checking or savings accounts.
+    :param request: HTTP django request object
+    :return: Django HTTPResponse with rendered deposit page HTML
+    """
+    # TODO: Add login cookie check/refresh here, on failure redirect to login page
+
+    context = {}
+    uname = request.GET["uname"]
+    try:
+        client_id = Client.objects.get(username=uname).client_id
+        client_accounts = Account.objects.filter(client_id=client_id)
+        # List comprehension to build a list of python dictionaries containing account data into the context
+        context["account_data"] = create_account_data_list(client_accounts)
+        context["uname"] = uname
+        context["error"] = False
+    except Exception as e:
+        print(e)
+        context["error"] = True
+        context["account_data"] = list()
+        # w/e else to fail gracefully
+    return render(request, "grizz_bank/deposit.html", context)
+
+def delete(request):
     pass
 
 # ===================== Business Logic Views =====================
@@ -188,9 +208,8 @@ def transfer_handler(request):
         return HttpResponseRedirect(f"/grizz_bank/transfer/?uname={uname}&error_msg=unknown_transfer_error")
 
 
-
 def deposit_handler(request):
-    pass
+    return HttpResponseRedirect(f"/grizz_bank/?uname={request.POST['uname']}&amt={request.POST['deposit_amount']}")
 
 
 def withdraw_handler(request):
@@ -203,3 +222,23 @@ def create_savings(request):
 
 def create_checking(request):
     pass
+
+def delete_handler(request):
+    pass
+
+
+# View Helper Function
+
+def create_account_data_list(accounts):
+   """
+   Helper function which transforms data from a Django Account row object into a list of python dictionaries
+   containing account data (type, balance, id)
+   rendering in the template.
+   :param accounts: list of Account row objects
+   :return: python dictionary
+   """
+   # dictionary mapping account type key to an actual account type name
+   types = {"S": "Savings", "C": "Checking"}
+   # List comprehension returning a list of dictionaries containing account type, balance, and ID
+   acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
+   return acct_data
