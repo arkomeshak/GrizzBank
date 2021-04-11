@@ -1,7 +1,11 @@
+import random
+import hashlib
+
 from django.shortcuts import render
 from .models import *  # import all of the model classes
 from django.http import HttpResponse, HttpResponseRedirect
 from django.db import transaction, IntegrityError
+from django.contrib import messages
 
 import re  # regular expressions
 import decimal
@@ -37,7 +41,10 @@ def index(request):
 def create_account(request):
     context = {}
     return render(request, "grizz_bank/create_account.html", context)
-
+    messages.info(request, 'Your account has been created successfully!')
+    #return HttpResponseRedirect('/grizz_bank/')
+    #do i have a redirect or a render???
+    #where do i put this redirect
 
 def reset_password(request):
     context = {}
@@ -96,7 +103,24 @@ def withdraw_deposit(request):
 
 
 def create_client(request):
-    pass
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    chars = []
+    for i in range(10):
+        chars.append(random.choice(alphabet))
+    salt = "".join(chars)
+    password = request.POST("password")
+    user = request.POST("username")
+
+    client = Client(f_name = request.POST("firstname"),
+                    l_name = request.POST("lastname"),
+                    pword_salt = password+salt,
+                    pword_hash = hashlib.sha256(password+salt),
+                    email = request.POST("email"),
+                    username = user,
+                    phone_number = request.POST("phonenumber"))
+    client.save()
+    #no idea if this redirect is right...I'm tired lol
+    #return HttpResponseRedirect('/grizz_bank/?uname='+user)
 
 
 def set_password(request):
