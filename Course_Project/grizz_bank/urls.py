@@ -11,6 +11,7 @@ urlpatterns = [
     path("reset_password/", reset_password, name="reset_password"),
     # Handler URLS
     path("transfer_handler/", transfer_handler, name="transfer_handler"),
+    path("login_handler/", login_handler, name="login_Handler"),
     path("deposit_handler/", deposit_handler, name="deposit_handler"),
     path("withdraw_handler/", withdraw_handler, name="withdraw_handler"),
     path("create_savings_handler/", create_savings, name="create_savings_handler"),

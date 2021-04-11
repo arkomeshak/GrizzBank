@@ -6,6 +6,11 @@ from django.db import transaction, IntegrityError
 import re  # regular expressions
 import decimal
 
+from django.http import HttpResponse
+from django.contrib.auth.forms import AuthenticationForm
+
+from django.contrib import messages
+import datetime
 # Create your views here.
 
 
@@ -45,9 +50,20 @@ def reset_password(request):
 
 
 def login(request):
-    pass
-    context ={}
-    return render(request, "grizz_bank/login.html", context)
+    print(request.COOKIES)
+    print(request.COOKIES.get('expiration'))
+    date = str(datetime.datetime.now())
+    print(date)
+    print(date < request.COOKIES.get('expiration'))
+    if  date < request.COOKIES.get('expiration'):
+        return HttpResponseRedirect(f"/grizz_bank?uname={request.COOKIES.get('uname')}&status=Login_success")
+    else:
+        context ={}
+        return render(request, "grizz_bank/login.html", context)
+        
+        
+    
+
 
 
 def transfer(request):
@@ -104,7 +120,46 @@ def set_password(request):
 
 
 def login_handler(request):
-    pass
+    usernameGuess = request.POST.get('username')
+    query = Client.objects.get(username=usernameGuess)
+    print(usernameGuess)
+    uname = query.username
+    print(query.pword_salt)
+    try:
+        if request.method == 'POST':
+            print (request.POST)
+            print("past IF POST")
+            form = AuthenticationForm(request, data=request.POST)
+            print(request.POST)
+            print(form.is_valid())
+            print(form.errors)
+            if not form.is_valid():
+                #The password from the user
+                passwordGuess =request.POST.get('password')
+                print(passwordGuess)
+                #the salt from the database
+                salt = query.pword_salt
+                print(salt)
+                saltedAndHashedGuess = salt + passwordGuess   #hash(salt + passwordGuess)
+                print(saltedAndHashedGuess)
+                #the salted and hashed password from the database
+                correctPwHash = (query.pword_salt) + (query.pword_hash)
+                print(correctPwHash)
+                if (saltedAndHashedGuess == correctPwHash):
+                    #login success
+                    response = HttpResponseRedirect(f"/grizz_bank?uname={uname}&status=Login_success")
+                    #COOKIE CREATION NOT WOKRING ATM
+                    expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=30)
+                    print(expiry_time)
+                    response.set_cookie('expiration', expiry_time)
+                    response.set_cookie('uname', uname)
+                    return response
+                else:
+                    messages.error(request,'username or password not correct')
+                    return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")               
+    except Client.DoesNotExist:
+        raise RuntimeError("Account not found")
+        
 
 
 @transaction.atomic
