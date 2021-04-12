@@ -134,25 +134,6 @@ def transfer_handler(request):
     :param request: POST request with account ids to transfer to, and from, as well as quantities
     :return: HTTP response, or redirect
     """
-    def get_account_ids(post_dict):
-        """
-        Helper function extracting the acount ids from the POST request's keys
-        :param post_dict: python dictionary
-        :return: (int: from_id, int: to_id)
-        """
-        from_id, to_id = None, None
-        for key in post_dict.keys():
-            from_match = re.match("from_acct\d*", key)
-            to_match = re.match("to_acct\d*", key)
-            # matches can have the id extracted by splitting string on "acct" substring and selecting second half
-            if from_match is not None:
-                from_id = int(from_match.string.split("acct")[1])
-                continue
-            if to_match is not None:
-                to_id = int(to_match.string.split("acct")[1])
-        if (from_id is None) or (to_id is None):
-            raise RuntimeError("transfer handler error: no valid to/from account IDs found")
-        return from_id, to_id
 
     uname = ""  # initially set uname to empty string
     try:
@@ -165,7 +146,7 @@ def transfer_handler(request):
                 raise RuntimeError(f"Transfer Handler expected the missing field {field} to be in the request.")
         # Retrieve account data from db using data sent by post
         amount, uname = post["transfer_amount"], post["uname"]
-        if not (len(amount) > 0 or amount.isnumeric()):
+        if not (len(amount) > 0 or amount.replace(".", "").isnumeric()):
             raise RuntimeError(f"Transfer handler error: Invalid amount passed by user. amount={amount}")
         # Convert ammount to a decimal type from the string
         amount = decimal.Decimal(float(amount))
@@ -207,9 +188,55 @@ def transfer_handler(request):
         print(f"Post data: {post}")
         return HttpResponseRedirect(f"/grizz_bank/transfer/?uname={uname}&error_msg=unknown_transfer_error")
 
-
+@transaction.atomic
 def deposit_handler(request):
-    return HttpResponseRedirect(f"/grizz_bank/?uname={request.POST['uname']}&amt={request.POST['deposit_amount']}")
+    """
+    Handles incoming POST Requests sent fromt transfer page to
+    :param request: HTTP POST request with
+    :return: HTTP Redirect
+    """
+    #return HttpResponseRedirect(f"/grizz_bank/?uname={request.POST['uname']}&amt={request.POST['deposit_amount']}")
+    try:
+        for key in ["uname", "deposit_amount"]:
+            if key not in request.POST:
+                raise KeyError(f"Deposit handler error: POST request missing {key} value")
+        if "check_img" not in request.FILES:
+            raise KeyError(f"Deposit handler error: POST request missing the check image")
+        uname, check_img, amount = request.POST["uname"], request.FILES["check_img"], request.POST["deposit_amount"]
+        # In lieu of a computer vision call to verify check is valid and matches amount specified, reject if
+        # "invalid" is part of the filename
+        if "invalid" in check_img.name.lower():
+            raise ValueError(f"Deposit handler error: Invalid check submitted")
+        elif not amount.replace(".", "").isnumeric():
+            raise ValueError(f"Deposit handler error: Invalid deposit amount {amount}")
+        amount = decimal.Decimal(float(amount))
+        # Get the account id
+        id = get_acct_id(request.POST.keys())
+        if id == -1:
+            raise KeyError(f"Deposit handler error: No account selected as deposit destination")
+        # Perform the transfer as an ACID transaction
+        with transaction.atomic():
+            dest_acct = Account.objects.get(pk=id)
+            dest_acct.acct_bal += amount
+            dest_acct.save()
+            # transfer successfully occurred
+        return HttpResponseRedirect(f"/grizz_bank/?uname={request.POST['uname']}&status_msg=deposit_success")
+    except KeyError as e:
+        print(e)
+        print(f"Post data: {request.POST}")
+        return HttpResponseRedirect(f"/grizz_bank/deposit/?uname={request.POST['uname']}&error_msg=invalid_input_error")
+    except ValueError as e:
+        print(e)
+        print(f"Post data: {request.POST}")
+        return HttpResponseRedirect(f"/grizz_bank/deposit/?uname={request.POST['uname']}&error_msg=bad_value_error")
+    except IntegrityError as e:
+        print(e)
+        print(f"POST data: {post}")
+        return HttpResponseRedirect(f"/grizz_bank/deposit/?uname={uname}&error_msg=deposit_transaction_error")
+    except Exception as e:
+        print(e)
+        print(f"Post data: {request.POST}")
+        return HttpResponseRedirect(f"/grizz_bank/deposit/?uname={request.POST['uname']}&error_msg=unknown_error")
 
 
 def withdraw_handler(request):
@@ -227,18 +254,54 @@ def delete_handler(request):
     pass
 
 
-# View Helper Function
+# View Helper Functions for use in multiple views
 
 def create_account_data_list(accounts):
-   """
-   Helper function which transforms data from a Django Account row object into a list of python dictionaries
-   containing account data (type, balance, id)
-   rendering in the template.
-   :param accounts: list of Account row objects
-   :return: python dictionary
-   """
-   # dictionary mapping account type key to an actual account type name
-   types = {"S": "Savings", "C": "Checking"}
-   # List comprehension returning a list of dictionaries containing account type, balance, and ID
-   acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
-   return acct_data
+    """
+    Helper function which transforms data from a Django Account row object into a list of python dictionaries
+    containing account data (type, balance, id)
+    rendering in the template.
+    :param accounts: list of Account row objects
+    :return: python dictionary
+    """
+    # dictionary mapping account type key to an actual account type name
+    types = {"S": "Savings", "C": "Checking"}
+    # List comprehension returning a list of dictionaries containing account type, balance, and ID
+    acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
+    return acct_data
+
+
+def get_acct_id(post_keys):
+    """
+    Helper function which takes in an iterable of keys in a POST request, and returns the account key of the
+    savings or checking account within the keys if one exists. Return -1 if no account found
+    :param post_keys: iterable of key values from a POST request dictionary
+    :return: account id as an integer, -1 if DNE
+    """
+    for k in post_keys:
+        print(f"type of key: {type(k)}")
+        res = re.match("(to)|(from)_acct", k)
+        if res is not None:
+            return int(k.split("acct")[1])
+    return -1
+
+
+def get_account_ids(post_dict):
+    """
+    Helper function extracting the acount ids from the POST request's keys
+    :param post_dict: python dictionary
+    :return: (int: from_id, int: to_id)
+    """
+    from_id, to_id = None, None
+    for key in post_dict.keys():
+        from_match = re.match("from_acct\d*", key)
+        to_match = re.match("to_acct\d*", key)
+        # matches can have the id extracted by splitting string on "acct" substring and selecting second half
+        if from_match is not None:
+            from_id = int(from_match.string.split("acct")[1])
+            continue
+        if to_match is not None:
+            to_id = int(to_match.string.split("acct")[1])
+    if (from_id is None) or (to_id is None):
+        raise RuntimeError("transfer handler error: no valid to/from account IDs found")
+    return from_id, to_id
