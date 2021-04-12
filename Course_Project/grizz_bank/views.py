@@ -11,6 +11,11 @@ from django.contrib import messages
 
 COOKIE_TIMEOUT = 15  # login cookie time to live in minutes
 
+from django.http import HttpResponse
+from django.contrib.auth.forms import AuthenticationForm
+
+from django.contrib import messages
+import datetime
 # Create your views here.
 
 
@@ -178,7 +183,6 @@ def login_handler(request):
                     return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")
     except Client.DoesNotExist:
         raise RuntimeError("Account not found")
-
 
 
 @transaction.atomic
