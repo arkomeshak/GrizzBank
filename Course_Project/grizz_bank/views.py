@@ -6,7 +6,8 @@ from django.db import transaction, IntegrityError
 import re  # regular expressions
 import decimal
 import datetime
-datetime.time()
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib import messages
 
 COOKIE_TIMEOUT = 15  # login cookie time to live in minutes
 
@@ -57,20 +58,23 @@ def reset_password(request):
 
 
 def login(request):
-    print(request.COOKIES)
+    """
+
+    :param request:
+    :return:
+    """
+    '''
+    print("cookies:", request.COOKIES)
     print(request.COOKIES.get('expiration'))
-    date = str(datetime.datetime.now())
     print(date)
     print(date < request.COOKIES.get('expiration'))
-    if  date < request.COOKIES.get('expiration'):
+    '''
+    date = str(datetime.datetime.now())
+    if "expiration" in request.COOKIES and date < request.COOKIES.get('expiration'):
         return HttpResponseRedirect(f"/grizz_bank?uname={request.COOKIES.get('uname')}&status=Login_success")
     else:
         context ={}
         return render(request, "grizz_bank/login.html", context)
-        
-        
-    
-
 
 
 def transfer(request):
@@ -161,10 +165,10 @@ def login_handler(request):
                 salt = query.pword_salt
                 print(salt)
                 saltedAndHashedGuess = salt + passwordGuess   #hash(salt + passwordGuess)
-                print(saltedAndHashedGuess)
+                print("pword plus salt", saltedAndHashedGuess)
                 #the salted and hashed password from the database
                 correctPwHash = (query.pword_salt) + (query.pword_hash)
-                print(correctPwHash)
+                print("correct:", correctPwHash)
                 if (saltedAndHashedGuess == correctPwHash):
                     #login success
                     response = HttpResponseRedirect(f"/grizz_bank?uname={uname}&status=Login_success")
@@ -176,10 +180,9 @@ def login_handler(request):
                     return response
                 else:
                     messages.error(request,'username or password not correct')
-                    return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")               
+                    return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")
     except Client.DoesNotExist:
         raise RuntimeError("Account not found")
-        
 
 
 @transaction.atomic
