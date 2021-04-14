@@ -8,8 +8,9 @@ import decimal
 import datetime
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
+from django.contrib.auth.models import User
 
-COOKIE_TIMEOUT = 15  # login cookie time to live in minutes
+SESSION_EXPIRATION = 1  # login cookie time to live in minutes
 
 # Create your views here.
 
@@ -24,6 +25,7 @@ def index(request):
         return acct_data
     """
     # TODO: Add login cookie check/refresh here, on failure redirect to login page
+    print(f"Cookies: {request.COOKIES}")
     context = {}
     uname = request.GET["uname"]
     try:
@@ -79,10 +81,15 @@ def transfer(request):
     :param request: Django HTTPS GET Request
     :return: HTTPS Response with HTML rendered per transfer.html template
     """
-    # TODO: Add login cookie check/refresh here, on failure redirect to login page
-
+    # Redirect to login if client not logged in
+    if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
+        print("Session not set, or expired")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=expired_session")
+    uname = request.session.get("uname", None)
+    if request.session.get("uname", None) is None:
+        print("uname is None :)")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
     context = {}
-    uname = request.GET["uname"]
     try:
         client_id = Client.objects.get(username=uname).client_id
         client_accounts = Account.objects.filter(client_id=client_id)
@@ -106,10 +113,15 @@ def deposit(request):
     :param request: HTTP django request object
     :return: Django HTTPResponse with rendered deposit page HTML
     """
-    # TODO: Add login cookie check/refresh here, on failure redirect to login page
-
+    # Redirect to login if client not logged in or session expired
+    if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
+        print("Session not set, or expired")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=expired_session")
+    uname = request.session.get("uname", None)
+    if request.session.get("uname", None) is None:
+        print("uname is None :)")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
     context = {}
-    uname = request.GET["uname"]
     try:
         client_id = Client.objects.get(username=uname).client_id
         client_accounts = Account.objects.filter(client_id=client_id)
@@ -146,7 +158,7 @@ def login_handler(request):
     print(query.pword_salt)
     try:
         if request.method == 'POST':
-            print (request.POST)
+            print(request.POST)
             print("past IF POST")
             form = AuthenticationForm(request, data=request.POST)
             print(request.POST)
@@ -166,15 +178,13 @@ def login_handler(request):
                 print("correct:", correctPwHash)
                 if (saltedAndHashedGuess == correctPwHash):
                     #login success
-                    response = HttpResponseRedirect(f"/grizz_bank?uname={uname}&status=Login_success")
-                    #COOKIE CREATION NOT WOKRING ATM
-                    expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=30)
-                    print(expiry_time)
-                    response.set_cookie('expiration', expiry_time)
-                    response.set_cookie('uname', uname)
+                    # Set the uname session value to username the user logged in with
+                    request.session["uname"] = uname
+                    request.session.set_expiry(SESSION_EXPIRATION * 60)  # expires in SESSION_EXPIRATION * 60s seconds
+                    response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Login_success")
                     return response
                 else:
-                    messages.error(request,'username or password not correct')
+                    messages.error(request, 'username or password not correct')
                     return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")
     except Client.DoesNotExist:
         raise RuntimeError("Account not found")
@@ -285,7 +295,7 @@ def deposit_handler(request):
         return HttpResponseRedirect(f"/grizz_bank/deposit/?uname={request.POST['uname']}&error_msg=bad_value_error")
     except IntegrityError as e:
         print(e)
-        print(f"POST data: {post}")
+        print(f"POST data: {request.post}")
         return HttpResponseRedirect(f"/grizz_bank/deposit/?uname={uname}&error_msg=deposit_transaction_error")
     except Exception as e:
         print(e)
@@ -359,3 +369,18 @@ def get_account_ids(post_dict):
     if (from_id is None) or (to_id is None):
         raise RuntimeError("transfer handler error: no valid to/from account IDs found")
     return from_id, to_id
+
+
+def logout(http_request, status_message=None):
+    """
+    Implement a logout routine which deletes a user's session, and their
+    sessionid in their cookies. Returns an HttpResponseRedirect to login page.
+    :param http_request: Django Request object
+    :param status_message: string to be made as a status message in GET request
+    :return: HttpResponseRedirect
+    """
+    if "sesisonid" in http_request.COOKIES:
+        http_request.session.flush()
+    if status_message is None:
+        return HttpResponseRedirect("grizz_bank/login/")
+    return HttpResponseRedirect(f"grizz_bank/login/?status_message={status_message}")
