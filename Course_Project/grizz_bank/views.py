@@ -10,7 +10,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth.models import User
 
-SESSION_EXPIRATION = 1  # login cookie time to live in minutes
+SESSION_EXPIRATION = 2  # login cookie time to live in minutes
 
 # Create your views here.
 
@@ -189,6 +189,19 @@ def login_handler(request):
     except Client.DoesNotExist:
         raise RuntimeError("Account not found")
 
+
+def logout_handler(request):
+    """
+    Simple handler which logs the user out, flushing the session from the DB and removing the session cookie.
+    Redirects to login page.
+    :param request: Django request
+    :return: HttpRedirectResponse
+    """
+    if "sessionid" in request.COOKIES:
+        request.session.flush()
+        return HttpResponseRedirect("../grizz_bank/login/?status_message=logged_out")
+    # Client wasn't logged in the first place (session likely already expired)
+    return HttpResponseRedirect("../grizz_bank/login/")
 
 
 @transaction.atomic
