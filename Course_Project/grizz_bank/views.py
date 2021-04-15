@@ -24,10 +24,19 @@ def index(request):
         acct_data = [{"type": types[acct.acct_type], "bal": acct.acct_bal, "id": acct.acct_id} for acct in accounts]
         return acct_data
     """
+    if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
+        print("Session not set, or expired")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=expired_session")
+    uname = request.session.get("uname", None)
+    if request.session.get("uname", None) is None:
+        print("uname is None :)")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
+
     # TODO: Add login cookie check/refresh here, on failure redirect to login page
     print(f"Cookies: {request.COOKIES}")
     context = {}
-    uname = request.GET["uname"]
+    uname =  request.session.get("uname", None)
+    print(request.session.get_expiry_age())
     try:
         client_id = Client.objects.get(username=uname).client_id
         client_accounts = Account.objects.filter(client_id=client_id)
@@ -50,7 +59,13 @@ def create_account(request):
 
 
 def reset_password(request):
-    context = {}
+    if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
+        print("Session not set, or expired")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=expired_session")
+    if request.session.get("uname", None) is None:
+        print("uname is None :)")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
+    context ={}
     return render(request, "grizz_bank/reset_password.html", context)
 
 
@@ -149,14 +164,60 @@ def create_client(request):
 def set_password(request):
     pass
 
+def reset_password_handler(request):
+    context = {}
+    print(request.session.get("uname", None))
+    query = Client.objects.get(username= request.session.get("uname", None))
+    uname = query.username
+   
+    try:
+        if request.method == 'POST':
+            print(request.POST)
+            print("past IF POST")
+            form = AuthenticationForm(request, data=request.POST)
+            print(request.POST)
+            print(form.is_valid())
+            print(form.errors)
+            if not form.is_valid():
+                #The password from the user
+                passwordCurrent = request.POST.get('password')
+                print(passwordCurrent)
+                #the salt from the database
+                salt = query.pword_salt
+                print(salt)
+                saltedAndHashedGuess = salt + passwordCurrent  #hash(salt + passwordGuess)
+                print("pword plus salt", saltedAndHashedGuess)
+                #the salted and hashed password from the database
+                correctPwHash = (query.pword_salt) + (query.pword_hash)
+                print("correct:", correctPwHash)
+                if (saltedAndHashedGuess == correctPwHash):
+                    passwordNew = request.POST.get('New_password')
+                    passwordConfirm = request.POST.get('confirm_password')
+                    if (passwordNew == passwordConfirm):
+                        with transaction.atomic():
+                            pwordChange = Client.objects.get(username=uname)
+                            pwordChange.pword_hash = passwordConfirm
+                            pwordChange.save()
+                        response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Reset_success")
+                        return response
+                    else:
+                        messages.error(request, 'make sure the new password field matched the confirm new password field')
+                        return HttpResponseRedirect(f"/grizz_bank/reset_password/?uname={uname}&status=New_Password_Didnt_Match")
+                else:
+                    messages.error(request, 'incorrect password')
+                    return HttpResponseRedirect(f"/grizz_bank/reset_password/?uname={uname}&status=Reset_Failed")
+    except Client.DoesNotExist:
+        raise RuntimeError("Account not found")
+    return render(request, "grizz_bank/index.html", context)
 
 def login_handler(request):
-    usernameGuess = request.POST.get('username')
-    query = Client.objects.get(username=usernameGuess)
-    print(usernameGuess)
-    uname = query.username
-    print(query.pword_salt)
     try:
+        usernameGuess = request.POST.get('username')
+        query = Client.objects.get(username=usernameGuess)
+        print(usernameGuess)
+        uname = query.username
+        print(query.pword_salt)
+  
         if request.method == 'POST':
             print(request.POST)
             print("past IF POST")
@@ -179,15 +240,23 @@ def login_handler(request):
                 if (saltedAndHashedGuess == correctPwHash):
                     #login success
                     # Set the uname session value to username the user logged in with
-                    request.session["uname"] = uname
-                    request.session.set_expiry(SESSION_EXPIRATION * 60)  # expires in SESSION_EXPIRATION * 60s seconds
+                    if (request.POST.get('remember') == 'on'):
+                        print(request.POST.get('remember'))
+                        
+                        request.session["uname"] = uname
+                        request.session.set_expiry(SESSION_EXPIRATION * 60)  # expires in SESSION_EXPIRATION * 60s seconds (Final Suggestion: if remember me is checked we can set session to last mabye 7 days)
+                    
+                    else:
+                        print(request.POST.get('remember'))
+                        request.session["uname"] = uname
+                        request.session.set_expiry(SESSION_EXPIRATION * 30)  # expires in SESSION_EXPIRATION * 30s seconds (Final Suggestion: if remember me is unchecked we can set session to last 1 day)
                     response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Login_success")
                     return response
                 else:
                     messages.error(request, 'username or password not correct')
                     return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")
     except Client.DoesNotExist:
-        raise RuntimeError("Account not found")
+        return HttpResponseRedirect(f"/grizz_bank/login?&status=Account_Not_Found")
 
 
 def logout_handler(request):
