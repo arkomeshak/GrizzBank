@@ -64,11 +64,7 @@ def index(request):
     # Success! message if account creation is successful
 def create_account(request):
     context = {}
-    #call create_client view
-    #create_client(request)
-    #return redirect('index')
     return render(request, "grizz_bank/create_account.html", context)
-    messages.info(request, 'Your account has been created successfully!')
 
 def reset_password(request):
     if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
@@ -181,45 +177,51 @@ def create_client(request):
     emailGiven = request.POST["email"]
     sav_bal = decimal.Decimal(float(request.POST["initialsavingsbalance"]))
 
-    #populate tables: Client, Username_archive, Email_archive, Phone_number_archive
-    with transaction.atomic():
-        client = Client(f_name = request.POST["firstname"],
-                        l_name = request.POST["lastname"],
-                        pword_salt = salt,
-                        pword_hash = hashlib.sha256(str(password+salt).encode('utf-8')).hexdigest(),
-                        email = emailGiven,
-                        username = user,
-                        phone_number = phone)
+    try:
+        #populate tables: Client, Username_archive, Email_archive, Phone_number_archive
+        with transaction.atomic():
+            client = Client(f_name = request.POST["firstname"],
+                            l_name = request.POST["lastname"],
+                            pword_salt = salt,
+                            pword_hash = hashlib.sha256(str(password+salt).encode('utf-8')).hexdigest(),
+                            email = emailGiven,
+                            username = user,
+                            phone_number = phone)
 
-    client.save()
+        client.save()
 
-    userArchive = UsernameArchive(username = user,
-                                  client = client)
+        userArchive = UsernameArchive(username = user,
+                                      client = client)
 
-    phoneNumberArchive = PhoneNumberArchive(client = client,
-                                            phone_number = phone)
+        phoneNumberArchive = PhoneNumberArchive(client = client,
+                                                phone_number = phone)
 
-    emailArchive = EmailArchive(client = client,
-                                email = emailGiven)
+        emailArchive = EmailArchive(client = client,
+                                    email = emailGiven)
 
-    #save all of the data in the tables
-    userArchive.save()
-    phoneNumberArchive.save()
-    emailArchive.save()
-    request.session["id"] = client.pk
-    new_response = HttpResponse(request)
+        #save all of the data in the tables
+        userArchive.save()
+        phoneNumberArchive.save()
+        emailArchive.save()
+        request.session["id"] = client.pk
+        new_response = HttpResponse(request)
 
-    #create checking and savings accounts
-    chk_account = Account(acct_bal = decimal.Decimal(0),
-                          acct_type="C",
-                          client=client)
-    chk_account.save()
+        #create checking and savings accounts
+        chk_account = Account(acct_bal = decimal.Decimal(0),
+                              acct_type="C",
+                              client=client)
+        chk_account.save()
 
-    sav_account = Account(acct_bal = sav_bal,
-                          acct_type = "S",
-                          client=client)
-    sav_account.save()
-    return HttpResponseRedirect("/grizz_bank/")
+        sav_account = Account(acct_bal = sav_bal,
+                              acct_type = "S",
+                              client=client)
+        sav_account.save()
+
+        messages.success(request, 'Your account has been created successfully!')
+        return HttpResponseRedirect("../")
+    except Exception:
+        messages.error(request, "Duplicate username, email, or phonenumber!")
+        return HttpResponseRedirect("../create_account/")
 
 def set_password(request):
     pass
