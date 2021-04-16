@@ -182,13 +182,14 @@ def create_client(request):
     sav_bal = decimal.Decimal(float(request.POST["initialsavingsbalance"]))
 
     #populate tables: Client, Username_archive, Email_archive, Phone_number_archive
-    client = Client(f_name = request.POST["firstname"],
-                    l_name = request.POST["lastname"],
-                    pword_salt = salt,
-                    pword_hash = hashlib.sha256(str(password+salt).encode('utf-8')).hexdigest(),
-                    email = emailGiven,
-                    username = user,
-                    phone_number = phone)
+    with transaction.atomic():
+        client = Client(f_name = request.POST["firstname"],
+                        l_name = request.POST["lastname"],
+                        pword_salt = salt,
+                        pword_hash = hashlib.sha256(str(password+salt).encode('utf-8')).hexdigest(),
+                        email = emailGiven,
+                        username = user,
+                        phone_number = phone)
 
     client.save()
 
