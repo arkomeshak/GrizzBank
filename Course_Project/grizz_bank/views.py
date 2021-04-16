@@ -1,5 +1,7 @@
 import random
 import hashlib
+from django.core.mail import *
+from django.conf import settings
 
 from django.shortcuts import render, redirect
 from .models import *  # import all of the model classes
@@ -63,8 +65,8 @@ def index(request):
 def create_account(request):
     context = {}
     #call create_client view
-    create_client(request)
-    return redirect('index')
+    #create_client(request)
+    #return redirect('index')
     return render(request, "grizz_bank/create_account.html", context)
     messages.info(request, 'Your account has been created successfully!')
 
@@ -165,7 +167,7 @@ def delete(request):
     pass
 
 # ===================== Business Logic Views =====================
-
+@transaction.atomic
 def create_client(request):
     #creation of salt and hash of password
     alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -173,36 +175,50 @@ def create_client(request):
     for i in range(10):
         chars.append(random.choice(alphabet))
     salt = "".join(chars)
-    password = request.POST("password")
-    user = request.POST("username")
-    phone = request.POST("phonenumber")
-    emailGiven = request.POST("email")
+    password = request.POST["password"]
+    user = request.POST["username"]
+    phone = request.POST["phonenumber"]
+    emailGiven = request.POST["email"]
+    sav_bal = decimal.Decimal(float(request.POST["initialsavingsbalance"]))
+
     #populate tables: Client, Username_archive, Email_archive, Phone_number_archive
-    client = Client(f_name = request.POST("firstname"),
-                    l_name = request.POST("lastname"),
-                    pword_salt = password+salt,
-                    pword_hash = hashlib.sha256(password+salt),
+    client = Client(f_name = request.POST["firstname"],
+                    l_name = request.POST["lastname"],
+                    pword_salt = salt,
+                    pword_hash = hashlib.sha256(str(password+salt).encode('utf-8')).hexdigest(),
                     email = emailGiven,
                     username = user,
                     phone_number = phone)
-    userArchive = UsernameArchive(username = user,
-                                  client = client.client_id)
 
-    phoneNumberArchive = PhoneNumberArchive(client = client.client_id,
+    client.save()
+
+    userArchive = UsernameArchive(username = user,
+                                  client = client)
+
+    phoneNumberArchive = PhoneNumberArchive(client = client,
                                             phone_number = phone)
 
-    emailArchive = EmailArchive(client = client.client_id,
+    emailArchive = EmailArchive(client = client,
                                 email = emailGiven)
 
     #save all of the data in the tables
-    client.save()
     userArchive.save()
     phoneNumberArchive.save()
     emailArchive.save()
+    request.session["id"] = client.pk
+    new_response = HttpResponse(request)
 
-    #call create_checking and create_savings views
-    create_checking(request,client)
-    create_savings(request,client)
+    #create checking and savings accounts
+    chk_account = Account(acct_bal = decimal.Decimal(0),
+                          acct_type="C",
+                          client=client)
+    chk_account.save()
+
+    sav_account = Account(acct_bal = sav_bal,
+                          acct_type = "S",
+                          client=client)
+    sav_account.save()
+    return HttpResponseRedirect("/grizz_bank/")
 
 def set_password(request):
     pass
@@ -433,24 +449,20 @@ def withdraw_handler(request):
 
 
     #populate tables:Account and Interest Rate
-def create_savings(request,Client):
-    sav_account = Account(acct_bal= request.POST("initialsavingsbalance"),
+def create_savings(request):
+    sav_account = Account(acct_bal= decimal.Decimal(float(request.POST["initialsavingsbalance"])),
                           acct_type="S",
-                          client=Client.client_id)
-    sav_ir = InterestRate(acct_type = "S",
-                          interest_rate = 0.0125)
+                          client=client)
+
     sav_account.save()
-    sav_ir.save()
 
     #populate tables: Account and Interest Rate
-def create_checking(request,Client):
+def create_checking(request):
     chk_account = Account(acct_bal=0,
                           acct_type="C",
-                          client=Client.client_id)
-    chk_ir = InterestRate(acct_type = "C",
-                          interest_rate = 0)
+                          client=client)
+
     chk_account.save()
-    chk_ir.save()
 
 def delete_handler(request):
     pass
