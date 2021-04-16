@@ -135,6 +135,16 @@ div.btn-group-toggle input.radio {
     margin: 0 auto;
   }
 
+ div.main p.err-msg {
+     color: darkred;
+     font-size: 1.3em;
+}
+
+ div.main p.status-msg {
+     color: dodgerblue;
+     font-size: 1.3em;
+ }
+
 
 
 
