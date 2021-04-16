@@ -1,7 +1,11 @@
-from django.shortcuts import render
+import random
+import hashlib
+
+from django.shortcuts import render, redirect
 from .models import *  # import all of the model classes
 from django.http import HttpResponse, HttpResponseRedirect
 from django.db import transaction, IntegrityError
+from django.contrib import messages
 
 import re  # regular expressions
 import decimal
@@ -52,11 +56,17 @@ def index(request):
     
     return render(request, "grizz_bank/index.html", context)
 
-
+    #this view renders the create_account template,
+    #redirects the page to the index or home page,
+    # and should send a message request to display a
+    # Success! message if account creation is successful
 def create_account(request):
     context = {}
+    #call create_client view
+    create_client(request)
+    return redirect('index')
     return render(request, "grizz_bank/create_account.html", context)
-
+    messages.info(request, 'Your account has been created successfully!')
 
 def reset_password(request):
     if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
@@ -156,10 +166,43 @@ def delete(request):
 
 # ===================== Business Logic Views =====================
 
-
 def create_client(request):
-    pass
+    #creation of salt and hash of password
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    chars = []
+    for i in range(10):
+        chars.append(random.choice(alphabet))
+    salt = "".join(chars)
+    password = request.POST("password")
+    user = request.POST("username")
+    phone = request.POST("phonenumber")
+    emailGiven = request.POST("email")
+    #populate tables: Client, Username_archive, Email_archive, Phone_number_archive
+    client = Client(f_name = request.POST("firstname"),
+                    l_name = request.POST("lastname"),
+                    pword_salt = password+salt,
+                    pword_hash = hashlib.sha256(password+salt),
+                    email = emailGiven,
+                    username = user,
+                    phone_number = phone)
+    userArchive = UsernameArchive(username = user,
+                                  client = client.client_id)
 
+    phoneNumberArchive = PhoneNumberArchive(client = client.client_id,
+                                            phone_number = phone)
+
+    emailArchive = EmailArchive(client = client.client_id,
+                                email = emailGiven)
+
+    #save all of the data in the tables
+    client.save()
+    userArchive.save()
+    phoneNumberArchive.save()
+    emailArchive.save()
+
+    #call create_checking and create_savings views
+    create_checking(request,client)
+    create_savings(request,client)
 
 def set_password(request):
     pass
@@ -389,12 +432,25 @@ def withdraw_handler(request):
     pass
 
 
-def create_savings(request):
-    pass
+    #populate tables:Account and Interest Rate
+def create_savings(request,Client):
+    sav_account = Account(acct_bal= request.POST("initialsavingsbalance"),
+                          acct_type="S",
+                          client=Client.client_id)
+    sav_ir = InterestRate(acct_type = "S",
+                          interest_rate = 0.0125)
+    sav_account.save()
+    sav_ir.save()
 
-
-def create_checking(request):
-    pass
+    #populate tables: Account and Interest Rate
+def create_checking(request,Client):
+    chk_account = Account(acct_bal=0,
+                          acct_type="C",
+                          client=Client.client_id)
+    chk_ir = InterestRate(acct_type = "C",
+                          interest_rate = 0)
+    chk_account.save()
+    chk_ir.save()
 
 def delete_handler(request):
     pass
