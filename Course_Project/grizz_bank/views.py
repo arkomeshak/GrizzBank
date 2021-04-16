@@ -240,23 +240,21 @@ def reset_password_handler(request):
             print(form.errors)
             if not form.is_valid():
                 #The password from the user
-                passwordCurrent = request.POST.get('password')
-                print(passwordCurrent)
+                passwordAttempt=request.POST.get('password')
                 #the salt from the database
                 salt = query.pword_salt
                 print(salt)
-                saltedAndHashedGuess = salt + passwordCurrent  #hash(salt + passwordGuess)
-                print("pword plus salt", saltedAndHashedGuess)
+                passwordGuess = hashlib.sha256(str(passwordAttempt+salt).encode('utf-8')).hexdigest()
                 #the salted and hashed password from the database
-                correctPwHash = (query.pword_salt) + (query.pword_hash)
-                print("correct:", correctPwHash)
-                if (saltedAndHashedGuess == correctPwHash):
+                correctPwHash = (query.pword_hash)
+                print("correct:", correctPwHash, "   GUESS: ", passwordGuess)
+                if (passwordGuess == correctPwHash):
                     passwordNew = request.POST.get('New_password')
                     passwordConfirm = request.POST.get('confirm_password')
                     if (passwordNew == passwordConfirm):
                         with transaction.atomic():
                             pwordChange = Client.objects.get(username=uname)
-                            pwordChange.pword_hash = passwordConfirm
+                            pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+salt).encode('utf-8')).hexdigest()
                             pwordChange.save()
                         response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Reset_success")
                         return response
@@ -287,17 +285,16 @@ def login_handler(request):
             print(form.errors)
             if not form.is_valid():
                 #The password from the user
-                passwordGuess =request.POST.get('password')
-                print(passwordGuess)
+                passwordAttempt=request.POST.get('password')
                 #the salt from the database
                 salt = query.pword_salt
                 print(salt)
-                saltedAndHashedGuess = salt + passwordGuess   #hash(salt + passwordGuess)
-                print("pword plus salt", saltedAndHashedGuess)
+                passwordGuess = hashlib.sha256(str(passwordAttempt+salt).encode('utf-8')).hexdigest()
                 #the salted and hashed password from the database
-                correctPwHash = (query.pword_salt) + (query.pword_hash)
+                correctPwHash = (query.pword_hash)
                 print("correct:", correctPwHash)
-                if (saltedAndHashedGuess == correctPwHash):
+                print("correct:", correctPwHash, "   GUESS: ", passwordGuess)
+                if (passwordGuess == correctPwHash):
                     #login success
                     # Set the uname session value to username the user logged in with
                     if (request.POST.get('remember') == 'on'):
