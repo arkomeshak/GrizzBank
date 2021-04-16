@@ -23,13 +23,13 @@
     <div class="main">
     <section class="header">
         <nav class="navbar navbar-expand-md navbar-dark">
-            <a href="/grizz_bank/" class="navbar-brand">Grizz Bank</a>
+            <a href="/grizz_bank/" class="navbar-brand">GrizzBank</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="./withdraw_deposit">Deposit or Withdraw</a></li>
+                    <li class="nav-item"><a class="nav-link" href="./deposit">Deposit</a></li>
                     <li class="nav-item"><a class="nav-link" href="./transfer">Transfer</a></li>
                     <li class="nav-item"><a class="nav-link" href="./reset_password">Reset Password</a></li>
-                    <li class="nav-item"><a class="nav-link" href="./login">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link" href="./logout_handler">Logout</a></li>
                 </ul>
             </div>
         </nav>
@@ -44,11 +44,11 @@
             <h1 style = "font-size: 2em;">GRIZZBANK</h1>
         </div>
         {%for acct in account_data %}
-        <div class = "account_box">
+        <div style="font-size:1.1em" class = "account_box">
             <div class = "checking_acct" style = "text-align: center">
-                <h2><label for="acct{{acct.id}}_from">{{acct.type}} Account </label><h2>
+                <h2><label for="acct{{acct.id}}_from">{{acct.type}} Account </label></h2>
                     <div class = "checking_balance">
-                        <h3><label for="acct{{acct.id}}_from">   Account #{{acct.id}}: <span class="acct-bal">${{acct.bal}}: </span></label><h3>
+                        <h3><label for="acct{{acct.id}}_from">Account #{{acct.id}}: <span class="acct-bal">${{acct.bal}} </span></label></h3>
                         <button class = "DW_btn"><a style="text-decoration: none; color: inherit;" href="../withdraw_deposit">Deposit/Withdraw</a></button>
                         <button class = "transfer_btn"><a style="text-decoration: none; color: inherit;"  href="./transfer">Transfer money</a></button>
                     </div>
