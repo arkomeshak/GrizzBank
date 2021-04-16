@@ -1,5 +1,7 @@
 import random
 import hashlib
+from django.core.mail import *
+from django.conf import settings
 
 from django.shortcuts import render, redirect
 from .models import *  # import all of the model classes
@@ -13,8 +15,6 @@ import datetime
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.core.mail import *
-from django.conf import settings
 
 SESSION_EXPIRATION = 2  # login cookie time to live in minutes
 
@@ -64,7 +64,9 @@ def index(request):
     # Success! message if account creation is successful
 def create_account(request):
     context = {}
-
+    #call create_client view
+    #create_client(request)
+    #return redirect('index')
     return render(request, "grizz_bank/create_account.html", context)
     messages.info(request, 'Your account has been created successfully!')
 
@@ -165,8 +167,6 @@ def delete(request):
     pass
 
 # ===================== Business Logic Views =====================
-
-
 @transaction.atomic
 def create_client(request):
     #creation of salt and hash of password
@@ -175,52 +175,51 @@ def create_client(request):
     for i in range(10):
         chars.append(random.choice(alphabet))
     salt = "".join(chars)
-    print(f"keys: {request.POST.keys()}")
     password = request.POST["password"]
     user = request.POST["username"]
     phone = request.POST["phonenumber"]
     emailGiven = request.POST["email"]
     sav_bal = decimal.Decimal(float(request.POST["initialsavingsbalance"]))
+
     #populate tables: Client, Username_archive, Email_archive, Phone_number_archive
     with transaction.atomic():
         client = Client(f_name = request.POST["firstname"],
-                    l_name = request.POST["lastname"],
-                    pword_salt = salt,
-                    pword_hash = hashlib.sha256((password+salt).encode("utf-8")).hexdigest(),
-                    email = emailGiven,
-                    username = user,
-                    phone_number = phone)
+                        l_name = request.POST["lastname"],
+                        pword_salt = salt,
+                        pword_hash = hashlib.sha256(str(password+salt).encode('utf-8')).hexdigest(),
+                        email = emailGiven,
+                        username = user,
+                        phone_number = phone)
 
-        client.save()
-        userArchive = UsernameArchive(username = user,
+    client.save()
+
+    userArchive = UsernameArchive(username = user,
                                   client = client)
-        phoneNumberArchive = PhoneNumberArchive(client = client,
-                                            phone_number = phone)
-        emailArchive = EmailArchive(client = client,
-                                email = emailGiven)
-        userArchive.save()
-        phoneNumberArchive.save()
-        emailArchive.save()
-        # Create a checking and savings accounts for the user
 
-        #save all of the data in the tables
-        userArchive.save()
-        phoneNumberArchive.save()
-        emailArchive.save()
-        request.session["id"] = client.pk
-        new_response = HttpResponse(request)
-        #Create the checking and savings accounts
-        chk_account = Account(acct_bal=decimal.Decimal(0),
+    phoneNumberArchive = PhoneNumberArchive(client = client,
+                                            phone_number = phone)
+
+    emailArchive = EmailArchive(client = client,
+                                email = emailGiven)
+
+    #save all of the data in the tables
+    userArchive.save()
+    phoneNumberArchive.save()
+    emailArchive.save()
+    request.session["id"] = client.pk
+    new_response = HttpResponse(request)
+
+    #create checking and savings accounts
+    chk_account = Account(acct_bal = decimal.Decimal(0),
                           acct_type="C",
                           client=client)
-        chk_account.save()
-        sav_account = Account(acct_bal=sav_bal,
-                              acct_type="S",
-                            client=client)
-        sav_account.save()
+    chk_account.save()
 
+    sav_account = Account(acct_bal = sav_bal,
+                          acct_type = "S",
+                          client=client)
+    sav_account.save()
     return HttpResponseRedirect("/grizz_bank/")
-
 
 def set_password(request):
     pass
@@ -312,8 +311,6 @@ def login_handler(request):
                         request.session["uname"] = uname
                         request.session.set_expiry(SESSION_EXPIRATION * 30)  # expires in SESSION_EXPIRATION * 30s seconds (Final Suggestion: if remember me is unchecked we can set session to last 1 day)
                     response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Login_success")
-                    send_mail(subject="you logged in", message="Yo, it worked!",
-                              from_email=settings.EMAIL_HOST_USER, recipient_list=["mooremk95@gmail.com"])
                     return response
                 else:
                     messages.error(request, 'username or password not correct')
@@ -454,27 +451,19 @@ def withdraw_handler(request):
 
     #populate tables:Account and Interest Rate
 def create_savings(request):
-    id = request.session["id"]
-    client = Client.objects.get(pk=id)
-    sav_account = Account(acct_bal= request.POST("initialsavingsbalance"),
+    sav_account = Account(acct_bal= decimal.Decimal(float(request.POST["initialsavingsbalance"])),
                           acct_type="S",
                           client=client)
-    sav_ir = InterestRate(acct_type = "S",
-                          interest_rate = 0.0125)
+
     sav_account.save()
-    sav_ir.save()
 
     #populate tables: Account and Interest Rate
 def create_checking(request):
-    id = request.session["id"]
-    client = Client.objects.get(pk=id)
     chk_account = Account(acct_bal=0,
                           acct_type="C",
                           client=client)
-    chk_ir = InterestRate(acct_type = "C",
-                          interest_rate = 0)
+
     chk_account.save()
-    chk_ir.save()
 
 def delete_handler(request):
     pass
