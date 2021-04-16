@@ -110,14 +110,14 @@ div.btn-group-toggle input.radio {
     padding:1%;
 }
 
-.transfer_btn, .DW_btn, .Logout_btn {
+.transfer_btn, .DW_btn, .Logout_btn, .submit {
     font-size: .9em;
     transition-duration: 0.4s;
     border-radius: 15px;
     padding:.2em;
   }
   
-.transfer_btn:hover, .DW_btn:hover, .Logout_btn:hover, .login_btn:hover, .cancel_btn:hover, .create_btn:hover, .reset_submit:hover {
+.transfer_btn:hover, .DW_btn:hover, .Logout_btn:hover, .login_btn:hover, .cancel_btn:hover, .create_btn:hover, .reset_submit:hover, .submit {
     background-color: black;
     color: var(--metallic-gold);
   }
