@@ -12,9 +12,9 @@ class Client(models.Model):
     l_name = models.CharField(max_length=45, null=False, blank=False, default="")
     pword_salt = models.CharField(max_length=10, null=True)
     pword_hash = models.CharField(max_length=300, null=True)
-    email = models.CharField(max_length=50, null=False, blank=False, default="")
-    username = models.CharField(max_length=45, null=False, blank=False, default="")
-    phone_number = models.CharField(max_length=10, null=False, blank=False, default="")
+    email = models.CharField(max_length=50, null=False, blank=False, default="", unique=True)
+    username = models.CharField(max_length=45, null=False, blank=False, default="", unique=True)
+    phone_number = models.CharField(max_length=10, null=False, blank=False, default="", unique=True)
 
 
 class UsernameArchive(models.Model):
@@ -52,5 +52,5 @@ class Account(models.Model):
 
 class RequestReset(models.Model):
     reset_id = models.fields.AutoField(primary_key=True)
-    verification_string = models.fields.CharField(max_length=45, null=False)
+    verification_string = models.fields.CharField(max_length=45, null=False, unique=True)
     expires = models.fields.DateTimeField(editable=False, null=False, default=(datetime.now() + timedelta(minutes=10)))
