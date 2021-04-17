@@ -15,9 +15,13 @@ import datetime
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth.models import User
-
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+import pytz
 SESSION_EXPIRATION = 2  # login cookie time to live in minutes
-
+utc=pytz.UTC
 # Create your views here.
 
 
@@ -221,8 +225,86 @@ def create_client(request):
     sav_account.save()
     return HttpResponseRedirect("/grizz_bank/")
 
-def set_password(request):
-    pass
+def forgot_password(request):
+    context = {}
+    return render(request, "grizz_bank/forgot_password.html", context)
+
+def forgot_password_request_handler(request):
+    context = {}
+    
+    if request.method == 'POST':
+        try:
+            query = RequestReset.objects.get(reset_id = request.session.get("resetID", None))
+            verificationCode = str(request.POST.get('Verify_code'))
+            correctVerify=str(query.verification_string)
+        except RequestReset.DoesNotExist:
+            return HttpResponseRedirect(f"/grizz_bank/login/?&status=Time_EXPIRED")
+        if correctVerify == verificationCode:
+            print(RequestReset.objects.get(reset_id = request.session.get("resetID", None)))
+            print(query.expires)
+            dateNow = datetime.datetime.now().replace(tzinfo=utc)
+            print(dateNow)
+            if (query.expires>= dateNow):
+                try:
+                    print(request.session.get("uname", None))
+                    query = Client.objects.get(username = request.session.get("uname", None))
+                    #The password from the user
+                    passwordNew=request.POST.get('New_password')
+                    passwordConfirm = request.POST.get('confirm_password')
+                    #the salt from the database
+                    salt = query.pword_salt
+                    print(salt)
+                    #the salted and hashed password from the database
+                    uname = query.username
+                except Client.DoesNotExist:
+                    return HttpResponseRedirect(f"/grizz_bank/login/?&status=Time_EXPIRED")
+                if (passwordNew == passwordConfirm):
+                    with transaction.atomic():
+                        pwordChange = Client.objects.get(username=uname)
+                        pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+salt).encode('utf-8')).hexdigest()
+                        pwordChange.save()
+                    response = HttpResponseRedirect(f"/grizz_bank/login/?status=FORGOTTON")
+                    return response
+                else:
+                    messages.error(request, 'make sure the new password field matched the confirm new password field')
+                    return HttpResponseRedirect(f"/grizz_bank/login/?&status=New_Password_Didnt_Match")
+            else:
+                messages.error(request, 'incorrect code')
+                return HttpResponseRedirect(f"/grizz_bank/login/?&status=Reset_Failed")
+                
+        return HttpResponseRedirect(f"/grizz_bank/login/?status=TIME_EXPIRED")
+    return render(request, "grizz_bank/forgot_password.html", context)
+
+def forgot_password_handler(request):
+    context = {}
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    chars = []
+    for i in range(10):
+        chars.append(random.choice(alphabet))
+    verificationKey = "".join(chars)
+    date = str(datetime.datetime.now().replace(tzinfo=utc) + timedelta(minutes=3))
+    print(date)
+    with transaction.atomic():
+        ForgotPassword = RequestReset(verification_string = verificationKey,
+                                      expires = date)
+        ForgotPassword.save()
+    resetID = RequestReset.objects.get(verification_string = verificationKey).reset_id
+    request.session["resetID"] = resetID
+    request.session["uname"] = Client.objects.get(username = request.POST.get('username')).username
+    print(request.session.get("resetID", None))
+    unameEmail = Client.objects.get(username = request.POST.get('username')).email
+    print(resetID)
+    print(RequestReset.objects.get(verification_string = verificationKey).expires)
+  
+    send_mail(
+    'GrizzBank Password reset',
+    'Your Verification Code:' + RequestReset.objects.get(reset_id = resetID).verification_string + '    Expires in: 3 Minutes',
+    'grizzBankNoReply@gmail.com',
+    [unameEmail],
+    fail_silently=False,
+)
+
+    return HttpResponseRedirect(f"/grizz_bank/forgot_password/?status=Email_Sent")
 
 def reset_password_handler(request):
     context = {}
