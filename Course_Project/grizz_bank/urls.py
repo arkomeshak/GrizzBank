@@ -20,6 +20,6 @@ urlpatterns = [
     path("create_client/", create_client, name="create_client"),
     path("set_password/", set_password, name="set_password"),
     path("reset_password_handler/", reset_password_handler, name="reset_password_handler"),
-    path("delete_nahdler", delete_handler, name="delete_handler"),
+    path("delete_handler", delete_handler, name="delete_handler"),
     path("logout_handler", logout_handler, name="logout_handler")
 ]

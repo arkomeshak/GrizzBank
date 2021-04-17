@@ -16,7 +16,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth.models import User
 
-SESSION_EXPIRATION = 2  # login cookie time to live in minutes
+SESSION_EXPIRATION = 60  # login cookie time to live in minutes
 
 # Create your views here.
 
@@ -116,20 +116,7 @@ def transfer(request):
     if request.session.get("uname", None) is None:
         print("uname is None :)")
         return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
-    context = {}
-    try:
-        client_id = Client.objects.get(username=uname).client_id
-        client_accounts = Account.objects.filter(client_id=client_id)
-        # List comprehension to build a list of python dictionaries containing account data into the context
-        context["account_data"] = create_account_data_list(client_accounts)
-        context["uname"] = uname
-        context["error"] = False
-    except Exception as e:
-        # If an error happens log to console, set context error flag true, and make account data an empty list
-        print(e)
-        context["error"] = True
-        context["account_data"] = list()
-
+    context = fetch_acct_data(uname)
     return render(request, "grizz_bank/transfer.html", context)
 
 
@@ -148,23 +135,32 @@ def deposit(request):
     if request.session.get("uname", None) is None:
         print("uname is None :)")
         return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
-    context = {}
-    try:
-        client_id = Client.objects.get(username=uname).client_id
-        client_accounts = Account.objects.filter(client_id=client_id)
-        # List comprehension to build a list of python dictionaries containing account data into the context
-        context["account_data"] = create_account_data_list(client_accounts)
-        context["uname"] = uname
-        context["error"] = False
-    except Exception as e:
-        print(e)
-        context["error"] = True
-        context["account_data"] = list()
-        # w/e else to fail gracefully
+    context = fetch_acct_data(uname)
     return render(request, "grizz_bank/deposit.html", context)
 
+
 def delete(request):
-    pass
+    """
+    Django view which renders the delete account template.
+    :param request: Djanto HTTP GET request
+    :return: rendered HTTP response for the delete index
+    """
+    if "sessionid" not in request.COOKIES or (request.session.get_expiry_age() == 0):
+        print("Session not set, or expired")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=expired_session")
+    uname = request.session.get("uname", None)
+    if request.session.get("uname", None) is None:
+        print("uname is None :)")
+        return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
+    context = fetch_acct_data(uname)
+    # Check if use failed to select the confirm deletion checkbox
+    if "err_msg" in request.GET:
+        if request.GET["err_msg"] == "confirm_delete":
+            context["err_msg"] = "Please Check the box confirming deletion of your account."
+        elif request.GET["err_msg"] == "bad_acct_selection":
+            context["err_msg"] = """Please select a single account to delete, and a single account to place 
+                                    remaining balance into."""
+    return render(request, "grizz_bank/delete.html", context)
 
 # ===================== Business Logic Views =====================
 @transaction.atomic
@@ -462,8 +458,50 @@ def create_checking(request):
 
     chk_account.save()
 
+@transaction.atomic
 def delete_handler(request):
-    pass
+    """
+    Django view which handles business logic for the deletion of a bank account,
+    :param request:
+    :return:
+    """
+    if request.method == "POST":
+        try:
+            print("post:", request.POST)
+            uname = request.session.get("uname")
+            from_id, to_id = get_account_ids(request.POST)
+            # Can't deposit into same acct your are deleting
+            if from_id == to_id: return HttpResponseRedirect("./err_msg=bad_acct_Selection")
+            if "confirm_delete" not in request.POST or request.POST["confirm_delete"][0] != "on":
+                raise ValueError("User didn't confirm acct deletion")
+            client_id = Client.objects.get(username=uname).client_id
+            to_delete = Account.objects.get(pk=from_id)
+            transfer_to = Account.objects.get(pk=to_id)
+            if client_id == to_delete.client.pk == transfer_to.client.pk:
+                # all good to perform the delete transaction
+                with transaction.atomic():
+                    remaining_bal = to_delete.acct_bal
+                    transfer_to.acct_bal += remaining_bal
+                    to_delete.delete()
+                    transfer_to.save()
+            else:
+                msg = "Somehow account to delete and account to deposit to did not have same key as client " + \
+                        f"\n\tclient id:{client_id}" + f" delete id: {to_delete.pk}" + f" dest id: {from_id}"
+                raise Exception(msg)
+            return HttpResponseRedirect("../grizz_bank/?status_msg=successful_deletion")
+        except ValueError as e:
+            print(e)
+            return HttpResponseRedirect("./delete/?err_msg=confirm_delete")
+        except RuntimeError as e:
+            print(e)
+            return  HttpResponseRedirect("./?err_msg=bad_acct_selection")
+        except Exception as e:
+            print(e)
+            return HttpResponseRedirect("../grizz_bank/?err_msg=unkown_delete_err")
+    else:
+        print(f"Attempted acces sof delete_handler via invalid thing")
+        return HttpResponseRedirect("../grizz_bank/")
+
 
 
 # View Helper Functions for use in multiple views
@@ -483,6 +521,31 @@ def create_account_data_list(accounts):
     return acct_data
 
 
+def fetch_acct_data(uname):
+    """
+    Helper function which retrieves savings/checking accounts, from the database, and stores them in a
+    dicitonary which can be used as a django context for template rendering. Used by various vierws rendering
+    templates w/ account balances.
+    :param uname: string
+    :return: python dictionary
+    """
+    acct_data = {}
+    try:
+        client_id = Client.objects.get(username=uname).client_id
+        client_accounts = Account.objects.filter(client_id=client_id)
+        # List comprehension to build a list of python dictionaries containing account data into the context
+        acct_data["account_data"] = create_account_data_list(client_accounts)
+        acct_data["uname"] = uname
+        acct_data["error"] = False
+    except Exception as e:
+        # If an error happens log to console, set context error flag true, and make account data an empty list
+        print(e)
+        acct_data["error"] = True
+        acct_data["account_data"] = list()
+
+    return acct_data
+
+
 def get_acct_id(post_keys):
     """
     Helper function which takes in an iterable of keys in a POST request, and returns the account key of the
@@ -492,7 +555,7 @@ def get_acct_id(post_keys):
     """
     for k in post_keys:
         print(f"type of key: {type(k)}")
-        res = re.match("(to)|(from)_acct", k)
+        res = re.match("(del)|(to)|(from)_acct", k)
         if res is not None:
             return int(k.split("acct")[1])
     return -1
