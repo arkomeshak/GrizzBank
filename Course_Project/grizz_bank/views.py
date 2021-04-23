@@ -17,9 +17,11 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
-SESSION_EXPIRATION = 60  # login cookie time to live in minutes
 import pytz
 utc=pytz.UTC
+
+SESSION_EXPIRATION = 60  # login cookie time to live in minutes
+ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # Create your views here.
 
 
@@ -158,6 +160,9 @@ def delete(request):
         print("uname is None :)")
         return HttpResponseRedirect(f"/grizz_bank/login/?status_message=invalid_session")
     context = fetch_acct_data(uname)
+    if len(context["account_data"]) <= 1:
+        print("User can't delete last account")
+        return HttpResponseRedirect(f"/grizz_bank/?status_message=attempt_delete_last_acct")
     # Check if use failed to select the confirm deletion checkbox
     if "err_msg" in request.GET:
         if request.GET["err_msg"] == "confirm_delete":
@@ -171,10 +176,9 @@ def delete(request):
 @transaction.atomic
 def create_client(request):
     #creation of salt and hash of password
-    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     chars = []
     for i in range(10):
-        chars.append(random.choice(alphabet))
+        chars.append(random.choice(ALPHABET))
     salt = "".join(chars)
     password = request.POST["password"]
     user = request.POST["username"]
@@ -222,6 +226,8 @@ def create_client(request):
     sav_account.save()
     return HttpResponseRedirect("/grizz_bank/")
 
+
+@transaction.atomic
 def forgot_password_request_handler(request):
     context = {}
     
@@ -254,7 +260,9 @@ def forgot_password_request_handler(request):
                 if (passwordNew == passwordConfirm):
                     with transaction.atomic():
                         pwordChange = Client.objects.get(username=uname)
-                        pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+salt).encode('utf-8')).hexdigest()
+                        newSalt = "".join([random.choice(ALPHABET) for i in range(10)])
+                        pwordChange.pword_salt = newSalt
+                        pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+newSalt).encode('utf-8')).hexdigest()
                         pwordChange.save()
                     response = HttpResponseRedirect(f"/grizz_bank/login/?status=FORGOTTON")
                     return response
@@ -299,6 +307,7 @@ def forgot_password_handler(request):
 
     return HttpResponseRedirect(f"/grizz_bank/forgot_password/?status=Email_Sent")
 
+@transaction.atomic()
 def reset_password_handler(request):
     context = {}
     print(request.session.get("uname", None))
@@ -329,7 +338,9 @@ def reset_password_handler(request):
                     if (passwordNew == passwordConfirm):
                         with transaction.atomic():
                             pwordChange = Client.objects.get(username=uname)
-                            pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+salt).encode('utf-8')).hexdigest()
+                            newsalt = "".join([random.choice(ALPHABET) for i in range(10)])
+                            pwordChange.pword_salt = newsalt
+                            pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+newsalt).encode('utf-8')).hexdigest()
                             pwordChange.save()
                         response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Reset_success")
                         return response
@@ -343,72 +354,22 @@ def reset_password_handler(request):
         raise RuntimeError("Account not found")
     return render(request, "grizz_bank/index.html", context)
 
-
-def reset_password_handler(request):
-    context = {}
-    print(request.session.get("uname", None))
-    query = Client.objects.get(username= request.session.get("uname", None))
-    uname = query.username
-   
-    try:
-        if request.method == 'POST':
-            print(request.POST)
-            print("past IF POST")
-            form = AuthenticationForm(request, data=request.POST)
-            print(request.POST)
-            print(form.is_valid())
-            print(form.errors)
-            if not form.is_valid():
-                #The password from the user
-                passwordAttempt=request.POST.get('password')
-                #the salt from the database
-                salt = query.pword_salt
-                print(salt)
-                passwordGuess = hashlib.sha256(str(passwordAttempt+salt).encode('utf-8')).hexdigest()
-                #the salted and hashed password from the database
-                correctPwHash = (query.pword_hash)
-                print("correct:", correctPwHash, "   GUESS: ", passwordGuess)
-                if (passwordGuess == correctPwHash):
-                    passwordNew = request.POST.get('New_password')
-                    passwordConfirm = request.POST.get('confirm_password')
-                    if (passwordNew == passwordConfirm):
-                        with transaction.atomic():
-                            pwordChange = Client.objects.get(username=uname)
-                            pwordChange.pword_hash = hashlib.sha256(str(passwordConfirm+salt).encode('utf-8')).hexdigest()
-                            pwordChange.save()
-                        response = HttpResponseRedirect(f"/grizz_bank/?uname={uname}&status=Reset_success")
-                        return response
-                    else:
-                        messages.error(request, 'make sure the new password field matched the confirm new password field')
-                        return HttpResponseRedirect(f"/grizz_bank/reset_password/?uname={uname}&status=New_Password_Didnt_Match")
-                else:
-                    messages.error(request, 'incorrect password')
-                    return HttpResponseRedirect(f"/grizz_bank/reset_password/?uname={uname}&status=Reset_Failed")
-    except Client.DoesNotExist:
-        raise RuntimeError("Account not found")
-    return render(request, "grizz_bank/index.html", context)
 
 def login_handler(request):
     try:
-        usernameGuess = request.POST.get('username')
-        query = Client.objects.get(username=usernameGuess)
-        print(usernameGuess)
-        uname = query.username
-        print(query.pword_salt)
-  
         if request.method == 'POST':
-            print(request.POST)
-            print("past IF POST")
-            form = AuthenticationForm(request, data=request.POST)
-            print(request.POST)
-            print(form.is_valid())
-            print(form.errors)
-            if not form.is_valid():
+            post = request.POST
+            if "username" in post and "password" in post:
+                uname = post["username"]
+                passwordAttempt= post["password"]
+                try:
+                    query = Client.objects.get(username=uname)
+                except Exception:
+                    raise ValueError("username not found")
                 #The password from the user
-                passwordAttempt=request.POST.get('password')
                 #the salt from the database
                 salt = query.pword_salt
-                print(salt)
+                print("salt", salt)
                 passwordGuess = hashlib.sha256(str(passwordAttempt+salt).encode('utf-8')).hexdigest()
                 #the salted and hashed password from the database
                 correctPwHash = (query.pword_hash)
@@ -432,8 +393,14 @@ def login_handler(request):
                 else:
                     messages.error(request, 'username or password not correct')
                     return HttpResponseRedirect(f"/grizz_bank/login?&status=Login_Failed")
-    except Client.DoesNotExist:
+            else:
+                return HttpResponseRedirect(f"/grizz_bank/login?&status=not_valid")
+        else:
+            return HttpResponseRedirect(f"/grizz_bank/login?&status=rediect_not_post")
+    except ValueError:
         return HttpResponseRedirect(f"/grizz_bank/login?&status=Account_Not_Found")
+    except Exception:
+        return HttpResponseRedirect(f"/grizz_bank/login?&status=server_error")
 
 
 def logout_handler(request):
@@ -568,19 +535,11 @@ def withdraw_handler(request):
 
     #populate tables:Account and Interest Rate
 def create_savings(request):
-    sav_account = Account(acct_bal= decimal.Decimal(float(request.POST["initialsavingsbalance"])),
-                          acct_type="S",
-                          client=client)
-
-    sav_account.save()
+    pass
 
     #populate tables: Account and Interest Rate
 def create_checking(request):
-    chk_account = Account(acct_bal=0,
-                          acct_type="C",
-                          client=client)
-
-    chk_account.save()
+    pass
 
 @transaction.atomic
 def delete_handler(request):
@@ -595,8 +554,9 @@ def delete_handler(request):
             uname = request.session.get("uname")
             from_id, to_id = get_account_ids(request.POST)
             # Can't deposit into same acct your are deleting
-            if from_id == to_id: return HttpResponseRedirect("./err_msg=bad_acct_Selection")
-            if "confirm_delete" not in request.POST or request.POST["confirm_delete"][0] != "on":
+            if from_id == to_id:
+                return HttpResponseRedirect("./err_msg=bad_acct_Selection")
+            elif "confirm_delete" not in request.POST or request.POST["confirm_delete"] != "on":
                 raise ValueError("User didn't confirm acct deletion")
             client_id = Client.objects.get(username=uname).client_id
             to_delete = Account.objects.get(pk=from_id)
@@ -618,10 +578,10 @@ def delete_handler(request):
             return HttpResponseRedirect("./delete/?err_msg=confirm_delete")
         except RuntimeError as e:
             print(e)
-            return  HttpResponseRedirect("./?err_msg=bad_acct_selection")
+            return HttpResponseRedirect("./delete/?err_msg=bad_acct_selection")
         except Exception as e:
             print(e)
-            return HttpResponseRedirect("../grizz_bank/?err_msg=unkown_delete_err")
+            return HttpResponseRedirect("./delete/?err_msg=unkown_delete_err")
     else:
         print(f"Attempted acces sof delete_handler via invalid thing")
         return HttpResponseRedirect("../grizz_bank/")
