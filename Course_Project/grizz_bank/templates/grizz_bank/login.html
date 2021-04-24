@@ -18,36 +18,35 @@
         <nav class="navbar navbar-expand-md navbar-dark">
             <a href="/grizz_bank/" class="navbar-brand">GrizzBank</a>
             <div class="collapse navbar-collapse">
+                <!--
                 <ul class="navbar-nav">
                     <li class="nav-item"><a class="nav-link" href="../deposit">Deposit</a></li>
                     <li class="nav-item"><a class="nav-link" href="../transfer">Transfer</a></li>
                     <li class="nav-item"><a class="nav-link" href="../reset_password">Reset Password</a></li>
                     <li class="nav-item"><a class="nav-link" href="../logout_handler">Logout</a></li>
                 </ul>
+                -->
             </div>
         </nav>
     </section>
-
-
-    </div>
 
 
     <section class="Login_content">
         <div class="title_container">
             <h1 style = "font-size: 2em;">GRIZZBANK</h1>
         </div>
-            <form class = "login_form" name = "login_form" method="post" action="/grizz_bank/login_handler/">
+            <form class = "login_form" name = "login_form" method="POST" action="/grizz_bank/login_handler/">
             {% csrf_token %}
             <h1> Account Login</h1>
             <div class="Login_container">
                 <div>
-                <label for="username" class = "email_label"><b>Email</b></label>
-                <input type="username" class = "Email" placeholder="Enter Username" name="username" required >
+                <label for="username" class = "email_label"><b>Username</b></label>
+                <input type="username" class = "Email" placeholder="Enter Username" name="username" id="username" required >
                 </div>
 
                 <div>
                 <label for="password" class = "password_label"><b>Password</b></label>
-                <input type="password" class = "Password" placeholder="Enter Password" name="password" required>
+                <input type="password" class = "Password" placeholder="Enter Password" name="password" id="password" required>
                 </div>
                 <button type = "submit" class ="login_btn" name ="login_btn" value="Login">Login</button>
                 <div>
@@ -55,8 +54,8 @@
 
                 <input type="checkbox" checked="checked" name="remember"> Remember me</label>
                 </div>
+                </div>
             </form>
-            </div>
             <div>
                 <button type="button" class="cancel_btn">Cancel</button>
                 <button type="button" class="create_btn"><a style="text-decoration: none; color: inherit;" href="../create_account">Create Account</a></button>
@@ -64,8 +63,9 @@
                   <form class = "login_form" name = "login_form" method="post" action="/grizz_bank/forgot_password_handler/">
             {% csrf_token %}
                 <h3> Forgot Password </h3>
-                <label for="username" class = "email_label"><b>Username</b></label>
-                <input type="username" class = "Email" placeholder="Enter Username" name="username" required >
+                <label for="forgot_uname" class = "email_label"><b>Username</b></label>
+                <input type="username" class = "Email" placeholder="Enter Username" name="username" id="forgot_uname" required>
+                      <br>
                 <button type = "submit" class ="login_btn" name ="login_btn" value="Forgot">Send reset link</button>
             </form>
             </div>
