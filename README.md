@@ -12,7 +12,7 @@
 
 ## Instructions:
 
-1. Clone this repository to a location on the machine you desire to run GrizzBank on
+1. Clone this repository's main branch to a location on the machine you desire to run GrizzBank on
    - The cloned repo root directory will be referred to as *GrizzBankDir*
 2. Ensure MySQL Server 8.0 or newer is installed.
 3. Create a new database within the server titled **grizz_bank** 
@@ -31,9 +31,32 @@
 7. Enter the virtual environment, or simply use your global python interpreter if pip was used.
 
 ### *Remaining instructions require an env with required packages*
+While in your virtual environment of choice within your terminal:
 
-8. 
-9. 
-10. 
+8. Set up settings.py within *GrizzBankDir/Course_Project/Course_Project* 
+    - set your secret key on line 23
+    - set your sql username and password on lines 83, 85 respectively
+    - on line 132 set the mail server to whichever server you are using
+    - on line 135 set your mail user to the correct address being used
+    - on line 136 set the password to your mail user
+9. cd to *GrizzBankDir/Course_Project* and Perform a migration to set up your grizz_bank mysql database
+    - ``python manage.py migrate``
+    - Note migrations for the database are included in the repository main branch
+10. run the following command to set a superuser ``python manage.py createsuperuser``
+11. run the django test server via the command: ``python manage.py runserver``
+    - This should provide a message that the server is active on 127.0.0.1 over port 8000
+12. in your browser enter the url *localhost:8000/admin* to access the admin panel. Login with the superuser from step 10
+13. Add checking and savings account types via the django admin panel per the following images:
+    - interest is not yet implemented, so the interest rate values do not currently impact features
+    
+    
+![Instructions to add insteres](readme_imgs/add_interest.PNG)
 
+Add a savings account type
+![Instructions to add a savings type](readme_imgs/acct_type_S.PNG)
 
+Add a checking account type
+![Instruction to add checkings](readme_imgs/acct_type_C.PNG)
+
+This completes the installation of GrizzBank. The web application itself can be accessed via the url: 
+*localhost:/grizz_bank/* and should redirect you to the login page where you can create an account. 
